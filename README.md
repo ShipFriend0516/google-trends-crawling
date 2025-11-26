@@ -18,32 +18,45 @@ pnpx tsx main.ts
 
 ### 옵션
 
-- `--geo <geo>`: 검색 지역 (기본값: KR)
+- `--geo <geo>`: 검색 지역 (필수)
+  - 특정 국가 코드 (예: `KR`, `US`, `JP`)
+  - `all`: 모든 주요 국가 (18개국) 순회 크롤링
 - `--range <range>`: 기간(일) (기본값: 7)
 - `--category <cat>`: 카테고리 (기본값: 0, 전체 카테고리)
 - `--debug`: 디버그 모드 활성화 (브라우저 창 표시)
 
 ### 예제
 
-#### 기본 실행 (한국, 7일, headless 모드)
-```bash
-pnpx tsx main.ts
-```
+#### 단일 국가 크롤링
 
-#### 미국 지역, 30일간 데이터 수집
 ```bash
+# 한국, 7일, headless 모드
+pnpx tsx main.ts --geo KR
+
+# 미국 지역, 30일간 데이터 수집
 pnpx tsx main.ts --geo US --range 30
-```
 
-#### 디버그 모드로 실행 (브라우저 창 표시)
-```bash
-pnpx tsx main.ts --debug
-```
+# 일본, 스포츠 카테고리, 디버그 모드
+pnpx tsx main.ts --geo JP --category 18 --debug
 
-#### 특정 카테고리로 실행
-```bash
+# 특정 카테고리로 실행
 pnpx tsx main.ts --geo KR --category 20 --range 7
 ```
+
+#### 모든 국가 크롤링 (--geo all)
+
+```bash
+# 모든 주요 국가 (18개국) 크롤링
+pnpx tsx main.ts --geo all
+
+# 모든 국가의 스포츠 카테고리 크롤링
+pnpx tsx main.ts --geo all --category 18
+
+# 모든 국가, 30일 데이터 수집
+pnpx tsx main.ts --geo all --range 30
+```
+
+> **참고**: `--geo all` 사용 시 18개 국가를 순차적으로 크롤링하며, 각 국가 사이에 3초 대기 시간이 있습니다. 완료 후 성공/실패 통계가 표시됩니다.
 
 ## 출력
 
@@ -68,7 +81,10 @@ pnpx tsx main.ts --geo KR --category 20 --range 7
 
 ## 사용 가능한 국가 코드
 
-주요 국가 코드 목록:
+### 특수 옵션
+- **`all`**: 아래 주요 18개국을 모두 크롤링
+
+### 주요 국가 코드 목록
 
 | 국가 | 코드 |
 |------|------|
