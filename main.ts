@@ -19,7 +19,13 @@ async function run() {
   const browser = await chromium.launch({
     headless: !opts.debug
   });
-  const page = await browser.newPage();
+
+  // 클립보드 권한을 가진 context 생성
+  const context = await browser.newContext({
+    permissions: ['clipboard-read', 'clipboard-write']
+  });
+
+  const page = await context.newPage();
 
   // URL 생성
   const url =
@@ -27,15 +33,39 @@ async function run() {
     `&sort=search-volume` +
     `&hours=${Number(opts.range) * 24}` +
     `&category=${opts.category}`;
-  await page.goto(url);
 
-  // 내보내기 버튼 클릭
-  await page.waitForSelector('button:has-text("내보내기")', {timeout: 10000});
-  await page.click('button:has-text("내보내기")');
+  // 페이지 로딩 대기
+  await page.goto(url, { waitUntil: 'networkidle' });
 
-  // '클립보드에 복사' 버튼 클릭
-  await page.waitForSelector('button:has-text("클립보드에 복사")', {timeout: 10000});
-  await page.click('button:has-text("클립보드에 복사")');
+  // 페이지가 완전히 렌더링될 때까지 추가 대기
+  await page.waitForTimeout(3000);
+
+  // 쿠키 배너가 있으면 처리
+  try {
+    const cookieButton = page.locator('button:has-text("Got it"), button:has-text("확인")').first();
+    await cookieButton.click({ timeout: 2000 });
+    await page.waitForTimeout(500);
+  } catch (e) {
+    // 쿠키 배너가 없으면 무시
+  }
+
+  // 내보내기 버튼 클릭 (다국어 대응)
+  // 페이지 맨 위로 스크롤
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(1000);
+
+  // "ios_share" 아이콘이 있고 "Export" 또는 "내보내기" 텍스트가 포함된 버튼 찾기
+  const exportButton = page.locator('button:has-text("Export"), button:has-text("내보내기")').filter({ hasText: /Export|내보내기/ }).first();
+  await exportButton.waitFor({ state: 'visible', timeout: 20000 });
+  await exportButton.click();
+
+  // 드롭다운 메뉴가 나타날 때까지 대기
+  await page.waitForTimeout(2000);
+
+  // '클립보드에 복사' 메뉴 항목 클릭 (다국어 대응)
+  const copyMenuItem = page.locator('[role="menuitem"][aria-label="클립보드에 복사"], [role="menuitem"][aria-label="Copy to clipboard"]').last();
+  await copyMenuItem.waitFor({ state: 'attached', timeout: 10000 });
+  await copyMenuItem.click({ force: true });
 
   // 클립보드에서 데이터 가져오기
   // (Playwright context에서만 clipboard API 사용 가능)
