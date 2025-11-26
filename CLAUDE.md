@@ -40,19 +40,43 @@ The entire application is contained in [main.ts](main.ts) with a straightforward
 2. **Browser automation**: Launches Playwright Chromium browser
    - Headless mode by default
    - Visible browser window in debug mode (`--debug` flag)
-3. **Data extraction**: Navigates to Google Trends, clicks "Export" → "Copy to clipboard" buttons
-4. **Data persistence**: Saves clipboard content to `./data/` directory
+3. **Data extraction**: Navigates to Google Trends, clicks "Export" → "CSV 다운로드" buttons
+4. **Data persistence**: Downloads CSV file to `./data/` directory with structured naming
 
 ### Output file naming
-Files are saved as: `{geo}_{category}_{range}days_{timestamp}.txt`
-- Example: `KR_0_7days_2025-11-26T03-45-12.txt`
+Files are saved as: `{geo}_{category}_{range}days_{date+hour}.csv`
+- Example: `KR_0_7days_2025-11-26T05.csv`
+- Timestamp format: `YYYY-MM-DDTHH` (date + hour only)
 - The `./data` directory is created automatically if it doesn't exist
+- **Duplicate prevention**: Skips crawling if data with the same parameters was collected within the last hour
+
+### CSV file contents
+The downloaded CSV includes:
+- **Trends**: Search keywords
+- **Search volume**: Relative search volume
+- **Started**: When the trend started
+- **Trend breakdown**: Related topics and queries
 
 ### Browser automation flow
-The tool uses Playwright's text selector strategy:
-- `button:has-text("내보내기")` - Export button (Korean UI)
-- `button:has-text("클립보드에 복사")` - Copy to clipboard button
-- Uses `navigator.clipboard.readText()` to retrieve copied data
+The tool uses Playwright for browser automation with informative CLI logging:
+
+1. **Preparation**: Checks for recent duplicate data
+2. **Navigation**: Navigates to Google Trends with specified parameters
+3. **Export**: Clicks Export button (multilingual support: "Export" / "내보내기")
+4. **Download**: Clicks "CSV 다운로드" / "Download CSV" from dropdown menu
+5. **Save**: Waits for download completion and saves with formatted filename
+
+**CLI Output Example**:
+```
+🚀 Preparing crawling...
+🌍 Researching trends in KR...
+📊 Category: 18 | Period: 7 days
+🔍 Navigating to Google Trends...
+📤 Exporting data...
+⬇️  Downloading CSV file...
+💾 Saving data...
+✅ Successfully saved to: data/KR_18_7days_2025-11-26T05.csv
+```
 
 ## Package Manager
 

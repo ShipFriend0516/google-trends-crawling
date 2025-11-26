@@ -16,16 +16,42 @@ program.parse(process.argv);
 const opts = program.opts();
 
 async function run() {
+  console.log('🚀 Preparing crawling...');
+
+  // 데이터 디렉토리 경로
+  const dataDir = './data';
+
+  // 최근 1시간 이내 동일 파라미터 파일 체크
+  if (fs.existsSync(dataDir)) {
+    const now = new Date();
+    const currentHour = now.toISOString().slice(0, 13); // YYYY-MM-DDTHH
+
+    const existingFile = `${opts.geo}_${opts.category}_${opts.range}days_${currentHour}.csv`;
+    const existingPath = path.join(dataDir, existingFile);
+
+    if (fs.existsSync(existingPath)) {
+      console.log('⚠️  Recent data already exists!');
+      console.log(`📁 File: ${existingPath}`);
+      console.log('ℹ️  Data was collected within the last hour. Skipping crawl.');
+      return;
+    }
+  }
+
+  console.log(`🌍 Researching trends in ${opts.geo}...`);
+  console.log(`📊 Category: ${opts.category} | Period: ${opts.range} days`);
+
   const browser = await chromium.launch({
     headless: !opts.debug
   });
 
-  // 클립보드 권한을 가진 context 생성
+  // 다운로드를 허용하는 context 생성
   const context = await browser.newContext({
-    permissions: ['clipboard-read', 'clipboard-write']
+    acceptDownloads: true
   });
 
   const page = await context.newPage();
+
+  console.log('🔍 Navigating to Google Trends...');
 
   // URL 생성
   const url =
@@ -49,6 +75,8 @@ async function run() {
     // 쿠키 배너가 없으면 무시
   }
 
+  console.log('📤 Exporting data...');
+
   // 내보내기 버튼 클릭 (다국어 대응)
   // 페이지 맨 위로 스크롤
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -62,31 +90,33 @@ async function run() {
   // 드롭다운 메뉴가 나타날 때까지 대기
   await page.waitForTimeout(2000);
 
-  // '클립보드에 복사' 메뉴 항목 클릭 (다국어 대응)
-  const copyMenuItem = page.locator('[role="menuitem"][aria-label="클립보드에 복사"], [role="menuitem"][aria-label="Copy to clipboard"]').last();
-  await copyMenuItem.waitFor({ state: 'attached', timeout: 10000 });
-  await copyMenuItem.click({ force: true });
+  console.log('⬇️  Downloading CSV file...');
 
-  // 클립보드에서 데이터 가져오기
-  // (Playwright context에서만 clipboard API 사용 가능)
-  const clipboardText = await page.evaluate(() =>
-    navigator.clipboard.readText()
-  );
+  // 'CSV 다운로드' 메뉴 항목 클릭 (다국어 대응)
+  const csvMenuItem = page.locator('[role="menuitem"][aria-label="CSV 다운로드"], [role="menuitem"][aria-label="Download CSV"]').last();
+  await csvMenuItem.waitFor({ state: 'attached', timeout: 10000 });
+
+  // 다운로드 이벤트 리스너 설정
+  const downloadPromise = page.waitForEvent('download');
+  await csvMenuItem.click({ force: true });
+
+  // 다운로드 완료 대기
+  const download = await downloadPromise;
 
   // 데이터 디렉토리 생성
-  const dataDir = './data';
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  // 파일명 생성: {국가}_{카테고리}_{날짜범위}_{크롤링 진행시간}.txt
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-  const filename = `${opts.geo}_${opts.category}_${opts.range}days_${timestamp}.txt`;
+  // 파일명 생성: {국가}_{카테고리}_{날짜범위}_{날짜+시간}.csv
+  const timestamp = new Date().toISOString().slice(0, 13).replace('T', 'T'); // YYYY-MM-DDTHH
+  const filename = `${opts.geo}_${opts.category}_${opts.range}days_${timestamp}.csv`;
   const filepath = path.join(dataDir, filename);
 
-  // 파일에 저장
-  fs.writeFileSync(filepath, clipboardText, 'utf-8');
-  console.log(`✔ 인기 검색어를 ${filepath}에 저장 완료!`);
+  // CSV 파일 저장
+  await download.saveAs(filepath);
+  console.log('💾 Saving data...');
+  console.log(`✅ Successfully saved to: ${filepath}`);
 
   await browser.close();
 }
