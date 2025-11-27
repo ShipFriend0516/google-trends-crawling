@@ -21,7 +21,7 @@ pnpx tsx main.ts
 - `--geo <geo>`: 검색 지역 (필수)
   - 특정 국가 코드 (예: `KR`, `US`, `JP`)
   - `all`: 모든 주요 국가 (18개국) 순회 크롤링
-- `--range <range>`: 기간(일) (기본값: 7)
+- `--range <range>`: 기간(일) (기본값: 7 (최대))
 - `--category <cat>`: 카테고리 (기본값: 0, 전체 카테고리)
 - `--debug`: 디버그 모드 활성화 (브라우저 창 표시)
 
@@ -51,9 +51,6 @@ pnpx tsx main.ts --geo all
 
 # 모든 국가의 스포츠 카테고리 크롤링
 pnpx tsx main.ts --geo all --category 18
-
-# 모든 국가, 30일 데이터 수집
-pnpx tsx main.ts --geo all --range 30
 ```
 
 > **참고**: `--geo all` 사용 시 18개 국가를 순차적으로 크롤링하며, 각 국가 사이에 3초 대기 시간이 있습니다. 완료 후 성공/실패 통계가 표시됩니다.
